@@ -1,7 +1,7 @@
 import sys
 import requests
 import os
-from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QPushButton, QLineEdit, QHBoxLayout, QTabWidget, QAction, QMessageBox, QMenuBar, QInputDialog, QRadioButton, QVBoxLayout, QDialog, QProgressBar
+from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QPushButton, QLineEdit, QHBoxLayout, QTabWidget, QAction, QMessageBox, QMenuBar, QInputDialog, QRadioButton, QVBoxLayout, QDialog, QProgressBar, QStatusBar, QDockWidget, QListWidget
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineProfile, QWebEnginePage, QWebEngineDownloadItem
 from PyQt5.QtWebEngineCore import QWebEngineUrlRequestInterceptor
 from PyQt5.QtCore import QUrl, Qt, QTimer, QEventLoop, QThread
@@ -32,16 +32,20 @@ class val(QMainWindow):
         self.nav_layout.addWidget(self.url_bar)
 
         # Add buttons for navigation
-        self.back_button = QPushButton('<', self)
+        self.back_button = QPushButton()
+        self.back_button.setIcon(QIcon('icons/back.png'))
         self.nav_layout.addWidget(self.back_button)
 
-        self.forward_button = QPushButton('>', self)
+        self.forward_button = QPushButton()
+        self.forward_button.setIcon(QIcon('icons/forward.png'))
         self.nav_layout.addWidget(self.forward_button)
 
-        self.refresh_button = QPushButton('Refresh', self)
+        self.refresh_button = QPushButton()
+        self.refresh_button.setIcon(QIcon('icons/refresh.png'))
         self.nav_layout.addWidget(self.refresh_button)
 
-        self.home_button = QPushButton('Home', self)
+        self.home_button = QPushButton()
+        self.home_button.setIcon(QIcon('icons/home.png'))
         self.nav_layout.addWidget(self.home_button)
 
         # Initialize browser
@@ -57,7 +61,11 @@ class val(QMainWindow):
 
         # Create a tab widget for multiple tabs
         self.tab_widget = QTabWidget(self)
+        self.tab_widget.setTabsClosable(True)
+        self.tab_widget.setMovable(True)
         self.tab_widget.tabCloseRequested.connect(self.close_tab)
+        self.tab_widget.tabBarDoubleClicked.connect(self.pin_tab)
+        self.tab_widget.currentChanged.connect(self.update_url_bar)
         self.layout.addWidget(self.tab_widget)
 
         # Default home URL
@@ -128,6 +136,21 @@ class val(QMainWindow):
         self.dark_mode_timer.timeout.connect(self.check_dark_mode_schedule)
         self.dark_mode_timer.start(60000)  # Check every minute
 
+        # Status Bar
+        self.status_bar = QStatusBar(self)
+        self.setStatusBar(self.status_bar)
+        self.browser.urlChanged.connect(self.update_status_bar)
+        self.browser.loadStarted.connect(self.show_loading_status)
+        self.browser.loadFinished.connect(self.show_ready_status)
+
+        # Sidebar for Bookmarks and History
+        self.sidebar = QDockWidget("Bookmarks & History", self)
+        self.sidebar.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+        self.sidebar_widget = QListWidget()
+        self.sidebar.setWidget(self.sidebar_widget)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.sidebar)
+        self.update_sidebar()
+
     def add_new_tab(self, url):
         new_browser = QWebEngineView(self)
         new_browser.setUrl(QUrl(url))
@@ -144,6 +167,7 @@ class val(QMainWindow):
         self.browser.setUrl(QUrl(url))
         if not self.is_private_browsing:
             self.history.append(url)
+        self.update_sidebar()
 
     def go_home(self):
         self.browser.setUrl(QUrl(self.home_url))
@@ -151,11 +175,32 @@ class val(QMainWindow):
     def close_tab(self, index):
         self.tab_widget.removeTab(index)
 
+    def pin_tab(self, index):
+        if self.tab_widget.tabText(index) != "Pinned":
+            self.tab_widget.setTabText(index, "Pinned")
+        else:
+            self.tab_widget.setTabText(index, "New Tab")
+
+    def update_url_bar(self, index):
+        current_browser = self.tab_widget.widget(index)
+        if current_browser:
+            self.url_bar.setText(current_browser.url().toString())
+
+    def update_status_bar(self, url):
+        self.status_bar.showMessage(url.toString())
+
+    def show_loading_status(self):
+        self.status_bar.showMessage("Loading...")
+
+    def show_ready_status(self):
+        self.status_bar.showMessage("Ready")
+
     def add_bookmark(self):
         url = self.browser.url().toString()
         if url not in self.bookmarks:
             self.bookmarks.append(url)
             QMessageBox.information(self, 'Bookmark Added', f'{url} has been added to your bookmarks.')
+        self.update_sidebar()
 
     def view_bookmarks(self):
         bookmarks_str = "\n".join(self.bookmarks) if self.bookmarks else "No bookmarks available."
@@ -182,7 +227,7 @@ class val(QMainWindow):
         try:
             response = requests.get('https://api.github.com/repos/owgydz/val/releases/latest')
             latest_version = response.json()['tag_name']
-            current_version = 'v13.0.2259.81'
+            current_version = 'v13.0.2259.256'
 
             if latest_version != current_version:
                 QMessageBox.information(self, 'Update Available', f'A new version ({latest_version}) is available.')
@@ -192,7 +237,7 @@ class val(QMainWindow):
             QMessageBox.warning(self, 'Error', 'Unable to check for updates at the moment.')
 
     def show_version_info(self):
-        QMessageBox.information(self, 'Version Info', 'Val Browser version: v13.0.2259.76\nCopyright (c) 2025 the Val Browser team.')
+        QMessageBox.information(self, 'Version', 'Val Browser version: v13.0.2259.256\nCopyright (c) 2025 the Val Browser team.')
 
     def open_download_manager(self):
         self.download_manager_dialog = DownloadManager(self.downloads)
@@ -242,6 +287,13 @@ class val(QMainWindow):
             self.set_style('dark')
         else:
             self.set_style('light')
+
+    def update_sidebar(self):
+        self.sidebar_widget.clear()
+        self.sidebar_widget.addItem("Bookmarks:")
+        self.sidebar_widget.addItems(self.bookmarks)
+        self.sidebar_widget.addItem("History:")
+        self.sidebar_widget.addItems(self.history)
 
 class ThemeDialog(QDialog):
     def __init__(self, parent=None):
