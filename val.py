@@ -176,7 +176,7 @@ class val(QMainWindow):
         try:
             response = requests.get('https://api.github.com/repos/owgydz/val/releases/latest')
             latest_version = response.json()['tag_name']
-            current_version = 'v13.0.2259.64'
+            current_version = 'v13.0.2259.76'
 
             if latest_version != current_version:
                 QMessageBox.information(self, 'Update Available', f'A new version ({latest_version}) is available.')
@@ -186,7 +186,7 @@ class val(QMainWindow):
             QMessageBox.warning(self, 'Error', 'Unable to check for updates at the moment.')
 
     def show_version_info(self):
-        QMessageBox.information(self, 'Version Info', 'Val Browser version: v13.0.2259.64\nCopyright (c) 2025 the Val Browser team.') 
+        QMessageBox.information(self, 'Version Info', 'Val Browser version: v13.0.2259.76\nCopyright (c) 2025 the Val Browser team.') 
 
     def open_download_manager(self):
         self.download_manager_dialog = DownloadManager(self.downloads)
