@@ -5,7 +5,6 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QPu
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineProfile, QWebEnginePage, QWebEngineDownloadItem
 from PyQt5.QtWebEngineCore import QWebEngineUrlRequestInterceptor
 from PyQt5.QtCore import QUrl, Qt, QTimer, QEventLoop, QThread
-from PyQt5.QtGui import QIcon
 from datetime import datetime, time
 
 class val(QMainWindow):
@@ -36,20 +35,16 @@ class val(QMainWindow):
         self.nav_layout.addWidget(self.url_bar)
 
         # Add buttons for navigation
-        self.back_button = QPushButton()
-        self.back_button.setIcon(QIcon('icons/back.png'))
+        self.back_button = QPushButton("Back")
         self.nav_layout.addWidget(self.back_button)
 
-        self.forward_button = QPushButton()
-        self.forward_button.setIcon(QIcon('icons/forward.png'))
+        self.forward_button = QPushButton("Forward")
         self.nav_layout.addWidget(self.forward_button)
 
-        self.refresh_button = QPushButton()
-        self.refresh_button.setIcon(QIcon('icons/refresh.png'))
+        self.refresh_button = QPushButton("Refresh")
         self.nav_layout.addWidget(self.refresh_button)
 
-        self.home_button = QPushButton()
-        self.home_button.setIcon(QIcon('icons/home.png'))
+        self.home_button = QPushButton("Home")
         self.nav_layout.addWidget(self.home_button)
 
         # Initialize browser
@@ -275,7 +270,7 @@ class val(QMainWindow):
                 QMainWindow { background-color: white; color: black; }
                 QLineEdit { background-color: #f0f0f0; color: black; border: 1px solid #ccc; }
                 QPushButton { background-color: #e0e0e0; color: black; border-radius: 5px; }
-                QTabWidget { background-color: #f7f7f7; }
+                QTabWidget { background-color: #f7f77; }
             """)
 
             # Reset Google to light mode
