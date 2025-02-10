@@ -18,6 +18,10 @@ class val(QMainWindow):
         self.theme = 'light'
         self.set_style(self.theme)
 
+        # Initialize channel to Stable by default
+        self.channel = 'stable'
+        self.set_channel(self.channel)
+
         # Set up the main widget and layout
         self.main_widget = QWidget()
         self.setCentralWidget(self.main_widget)
@@ -131,6 +135,11 @@ class val(QMainWindow):
         self.download_manager_action.triggered.connect(self.open_download_manager)
         self.file_menu.addAction(self.download_manager_action)
 
+        # Channel selection action
+        self.channel_selection_action = QAction('Select Channel', self)
+        self.channel_selection_action.triggered.connect(self.select_channel)
+        self.settings_menu.addAction(self.channel_selection_action)
+
         # Dark Mode Scheduling
         self.dark_mode_timer = QTimer(self)
         self.dark_mode_timer.timeout.connect(self.check_dark_mode_schedule)
@@ -225,7 +234,7 @@ class val(QMainWindow):
 
     def check_for_updates(self):
         try:
-            response = requests.get('https://api.github.com/repos/owgydz/val/releases/latest')
+            response = requests.get(f'https://api.github.com/repos/owgydz/val/releases/latest?channel={self.channel}')
             latest_version = response.json()['tag_name']
             current_version = 'v13.0.2259.256B'
 
@@ -237,7 +246,7 @@ class val(QMainWindow):
             QMessageBox.warning(self, 'Error', 'Unable to check for updates at the moment.')
 
     def show_version_info(self):
-        QMessageBox.information(self, 'Version', 'Val Browser version: v13.0.2259.256, beta channel.\nCopyright (c) 2025 the Val Browser team.')
+        QMessageBox.information(self, 'Version', f'Val Browser version: v13.0.2259.256, {self.channel} channel.\nCopyright (c) 2025 the Val Browser team.')
 
     def open_download_manager(self):
         self.download_manager_dialog = DownloadManager(self.downloads)
@@ -295,6 +304,14 @@ class val(QMainWindow):
         self.sidebar_widget.addItem("History:")
         self.sidebar_widget.addItems(self.history)
 
+    def set_channel(self, channel):
+        self.channel = channel
+        QMessageBox.information(self, 'Channel Set', f'The channel has been set to {channel}.')
+
+    def select_channel(self):
+        dialog = ChannelDialog(self)
+        dialog.exec_()
+
 class ThemeDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -318,6 +335,35 @@ class ThemeDialog(QDialog):
             self.parent().set_style('light')
         else:
             self.parent().set_style('dark')
+        self.accept()
+
+class ChannelDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle('Select Channel')
+        self.setGeometry(400, 200, 300, 150)
+
+        self.dev_radio = QRadioButton('Dev Channel', self)
+        self.beta_radio = QRadioButton('Beta Channel', self)
+        self.stable_radio = QRadioButton('Stable Channel', self)
+        self.stable_radio.setChecked(True)
+
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.dev_radio)
+        layout.addWidget(self.beta_radio)
+        layout.addWidget(self.stable_radio)
+
+        button = QPushButton('Apply', self)
+        button.clicked.connect(self.apply_channel)
+        layout.addWidget(button)
+
+    def apply_channel(self):
+        if self.dev_radio.isChecked():
+            self.parent().set_channel('dev')
+        elif self.beta_radio.isChecked():
+            self.parent().set_channel('beta')
+        else:
+            self.parent().set_channel('stable')
         self.accept()
 
 class RequestInterceptor(QWebEngineUrlRequestInterceptor):
