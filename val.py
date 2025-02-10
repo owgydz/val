@@ -397,6 +397,6 @@ class DownloadManager(QDialog):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    browser = val(QMainWindow)
+    browser = val()
     browser.show()
     sys.exit(app.exec_())
