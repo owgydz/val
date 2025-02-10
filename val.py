@@ -1,11 +1,12 @@
 import sys
 import requests
 import os
-from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QPushButton, QLineEdit, QHBoxLayout, QTabWidget, QAction, QMessageBox, QMenuBar, QInputDialog, QRadioButton, QVBoxLayout, QDialog, QFileDialog, QProgressBar, QLabel
+from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QPushButton, QLineEdit, QHBoxLayout, QTabWidget, QAction, QMessageBox, QMenuBar, QInputDialog, QRadioButton, QVBoxLayout, QDialog, QProgressBar
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineProfile, QWebEnginePage, QWebEngineDownloadItem
 from PyQt5.QtWebEngineCore import QWebEngineUrlRequestInterceptor
 from PyQt5.QtCore import QUrl, Qt, QTimer, QEventLoop, QThread
 from PyQt5.QtGui import QIcon
+from datetime import datetime, time
 
 class val(QMainWindow):
     def __init__(self):
@@ -122,6 +123,11 @@ class val(QMainWindow):
         self.download_manager_action.triggered.connect(self.open_download_manager)
         self.file_menu.addAction(self.download_manager_action)
 
+        # Dark Mode Scheduling
+        self.dark_mode_timer = QTimer(self)
+        self.dark_mode_timer.timeout.connect(self.check_dark_mode_schedule)
+        self.dark_mode_timer.start(60000)  # Check every minute
+
     def add_new_tab(self, url):
         new_browser = QWebEngineView(self)
         new_browser.setUrl(QUrl(url))
@@ -186,7 +192,7 @@ class val(QMainWindow):
             QMessageBox.warning(self, 'Error', 'Unable to check for updates at the moment.')
 
     def show_version_info(self):
-        QMessageBox.information(self, 'Version Info', 'Val Browser version: v13.0.2259.76\nCopyright (c) 2025 the Val Browser team.') 
+        QMessageBox.information(self, 'Version Info', 'Val Browser version: v13.0.2259.76\nCopyright (c) 2025 the Val Browser team.')
 
     def open_download_manager(self):
         self.download_manager_dialog = DownloadManager(self.downloads)
@@ -200,6 +206,16 @@ class val(QMainWindow):
                 QPushButton { background-color: #5c5c5c; color: white; border-radius: 5px; }
                 QTabWidget { background-color: #3c3c3c; }
             """)
+            
+            # Inject dark mode CSS for Google
+            self.browser.page().runJavaScript("""
+                (function() {
+                    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                        document.documentElement.style.backgroundColor = '#2c2c2c';
+                        document.documentElement.style.color = 'white';
+                    }
+                })();
+            """)
         else:
             self.setStyleSheet("""
                 QMainWindow { background-color: white; color: black; }
@@ -208,9 +224,24 @@ class val(QMainWindow):
                 QTabWidget { background-color: #f7f7f7; }
             """)
 
+            # Reset Google to light mode
+            self.browser.page().runJavaScript("""
+                (function() {
+                    document.documentElement.style.backgroundColor = '';
+                    document.documentElement.style.color = '';
+                })();
+            """)
+
     def change_theme(self):
         dialog = ThemeDialog(self)
         dialog.exec_()
+
+    def check_dark_mode_schedule(self):
+        current_time = datetime.now().time()
+        if current_time >= time(18, 0) or current_time < time(6, 0):  # Example: Dark mode from 6 PM to 6 AM
+            self.set_style('dark')
+        else:
+            self.set_style('light')
 
 class ThemeDialog(QDialog):
     def __init__(self, parent=None):
