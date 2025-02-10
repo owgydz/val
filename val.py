@@ -3,10 +3,11 @@ import requests
 import os
 from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QPushButton, QLineEdit, QHBoxLayout, QTabWidget, QAction, QMessageBox, QMenuBar, QInputDialog, QRadioButton, QVBoxLayout, QDialog, QFileDialog, QProgressBar, QLabel
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineProfile, QWebEnginePage, QWebEngineDownloadItem
+from PyQt5.QtWebEngineCore import QWebEngineUrlRequestInterceptor
 from PyQt5.QtCore import QUrl, Qt, QTimer, QEventLoop, QThread
 from PyQt5.QtGui import QIcon
 
-class ValBrowser(QMainWindow):
+class val(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle('Val')
@@ -31,20 +32,25 @@ class ValBrowser(QMainWindow):
 
         # Add buttons for navigation
         self.back_button = QPushButton('<', self)
-        self.back_button.clicked.connect(self.browser.back)
         self.nav_layout.addWidget(self.back_button)
 
         self.forward_button = QPushButton('>', self)
-        self.forward_button.clicked.connect(self.browser.forward)
         self.nav_layout.addWidget(self.forward_button)
 
         self.refresh_button = QPushButton('Refresh', self)
-        self.refresh_button.clicked.connect(self.browser.reload)
         self.nav_layout.addWidget(self.refresh_button)
 
         self.home_button = QPushButton('Home', self)
-        self.home_button.clicked.connect(self.go_home)
         self.nav_layout.addWidget(self.home_button)
+
+        # Initialize browser
+        self.browser = QWebEngineView(self)
+
+        # Connect button signals
+        self.back_button.clicked.connect(self.browser.back)
+        self.forward_button.clicked.connect(self.browser.forward)
+        self.refresh_button.clicked.connect(self.browser.reload)
+        self.home_button.clicked.connect(self.go_home)
 
         self.layout.addWidget(self.nav_bar)
 
@@ -119,7 +125,8 @@ class ValBrowser(QMainWindow):
     def add_new_tab(self, url):
         new_browser = QWebEngineView(self)
         new_browser.setUrl(QUrl(url))
-        new_browser.page().profile().setRequestInterceptor(RequestInterceptor(self))
+        interceptor = RequestInterceptor(self)
+        new_browser.page().profile().setRequestInterceptor(interceptor)
         new_tab_index = self.tab_widget.addTab(new_browser, 'New Tab')
         self.tab_widget.setCurrentIndex(new_tab_index)
         self.browser = new_browser
@@ -230,16 +237,13 @@ class ThemeDialog(QDialog):
             self.parent().set_style('dark')
         self.accept()
 
-class RequestInterceptor(QWebEnginePage):
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.parent = parent
-
-    def createRequest(self, operation, request, data):
-        # Block pop-ups based on windowName
-        if "popup" in request.url().toString().lower() or request.url().toString().startswith("about:blank"):
-            return None  # Block the pop-up request
-        return super().createRequest(operation, request, data)
+class RequestInterceptor(QWebEngineUrlRequestInterceptor):
+    def interceptRequest(self, info):
+        url = info.requestUrl().toString().lower()
+        if "popup" in url or url.startswith("about:blank"):
+            info.block(True)  # Block the request
+        else:
+            info.block(False)  # Allow the request
 
 class DownloadManager(QDialog):
     def __init__(self, downloads, parent=None):
@@ -269,6 +273,6 @@ class DownloadManager(QDialog):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    browser = ValBrowser()
+    browser = val()
     browser.show()
     sys.exit(app.exec_())
