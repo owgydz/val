@@ -1,0 +1,274 @@
+import sys
+import requests
+import os
+from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QPushButton, QLineEdit, QHBoxLayout, QTabWidget, QAction, QMessageBox, QMenuBar, QInputDialog, QRadioButton, QVBoxLayout, QDialog, QFileDialog, QProgressBar, QLabel
+from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineProfile, QWebEnginePage, QWebEngineDownloadItem
+from PyQt5.QtCore import QUrl, Qt, QTimer, QEventLoop, QThread
+from PyQt5.QtGui import QIcon
+
+class ValBrowser(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle('Val')
+        self.setGeometry(100, 100, 1200, 800)
+
+        # Initialize light theme by default
+        self.theme = 'light'
+        self.set_style(self.theme)
+
+        # Set up the main widget and layout
+        self.main_widget = QWidget()
+        self.setCentralWidget(self.main_widget)
+        self.layout = QVBoxLayout(self.main_widget)
+
+        # Set up the navigation bar (URL bar, Back, Forward, Refresh, Home, Search)
+        self.nav_bar = QWidget(self)
+        self.nav_layout = QHBoxLayout(self.nav_bar)
+        self.url_bar = QLineEdit(self)
+        self.url_bar.setPlaceholderText("Enter URL and hit Enter...")
+        self.url_bar.returnPressed.connect(self.navigate_to_url)
+        self.nav_layout.addWidget(self.url_bar)
+
+        # Add buttons for navigation
+        self.back_button = QPushButton('<', self)
+        self.back_button.clicked.connect(self.browser.back)
+        self.nav_layout.addWidget(self.back_button)
+
+        self.forward_button = QPushButton('>', self)
+        self.forward_button.clicked.connect(self.browser.forward)
+        self.nav_layout.addWidget(self.forward_button)
+
+        self.refresh_button = QPushButton('Refresh', self)
+        self.refresh_button.clicked.connect(self.browser.reload)
+        self.nav_layout.addWidget(self.refresh_button)
+
+        self.home_button = QPushButton('Home', self)
+        self.home_button.clicked.connect(self.go_home)
+        self.nav_layout.addWidget(self.home_button)
+
+        self.layout.addWidget(self.nav_bar)
+
+        # Create a tab widget for multiple tabs
+        self.tab_widget = QTabWidget(self)
+        self.tab_widget.tabCloseRequested.connect(self.close_tab)
+        self.layout.addWidget(self.tab_widget)
+
+        # Default home URL
+        self.home_url = 'https://www.google.com'
+
+        # Bookmarks and history management
+        self.bookmarks = []
+        self.history = []
+        self.is_private_browsing = False
+
+        # Download manager setup
+        self.downloads = []
+
+        # First tab - New tab
+        self.add_new_tab(self.home_url)
+
+        # Set up menu
+        self.menu_bar = self.menuBar()
+        self.file_menu = self.menu_bar.addMenu('File')
+        self.bookmarks_menu = self.menu_bar.addMenu('Bookmarks')
+        self.history_menu = self.menu_bar.addMenu('History')
+        self.settings_menu = self.menu_bar.addMenu('Settings')
+        self.help_menu = self.menu_bar.addMenu('Help')
+
+        # Actions for menu items
+        self.add_bookmark_action = QAction('Add Bookmark', self)
+        self.add_bookmark_action.triggered.connect(self.add_bookmark)
+        self.bookmarks_menu.addAction(self.add_bookmark_action)
+
+        self.view_bookmarks_action = QAction('View Bookmarks', self)
+        self.view_bookmarks_action.triggered.connect(self.view_bookmarks)
+        self.bookmarks_menu.addAction(self.view_bookmarks_action)
+
+        self.view_history_action = QAction('View History', self)
+        self.view_history_action.triggered.connect(self.view_history)
+        self.history_menu.addAction(self.view_history_action)
+
+        self.set_homepage_action = QAction('Set Homepage', self)
+        self.set_homepage_action.triggered.connect(self.set_homepage)
+        self.settings_menu.addAction(self.set_homepage_action)
+
+        self.toggle_private_browsing_action = QAction('Toggle Private Browsing', self)
+        self.toggle_private_browsing_action.triggered.connect(self.toggle_private_browsing)
+        self.settings_menu.addAction(self.toggle_private_browsing_action)
+
+        # Add Theme Customization action
+        self.theme_customization_action = QAction('Change Theme', self)
+        self.theme_customization_action.triggered.connect(self.change_theme)
+        self.settings_menu.addAction(self.theme_customization_action)
+
+        # Version info action
+        self.version_info_action = QAction('Version Info', self)
+        self.version_info_action.triggered.connect(self.show_version_info)
+        self.help_menu.addAction(self.version_info_action)
+
+        # Auto version checking
+        self.check_for_updates_action = QAction('Check for Updates', self)
+        self.check_for_updates_action.triggered.connect(self.check_for_updates)
+        self.help_menu.addAction(self.check_for_updates_action)
+
+        # Download manager action
+        self.download_manager_action = QAction('Download Manager', self)
+        self.download_manager_action.triggered.connect(self.open_download_manager)
+        self.file_menu.addAction(self.download_manager_action)
+
+    def add_new_tab(self, url):
+        new_browser = QWebEngineView(self)
+        new_browser.setUrl(QUrl(url))
+        new_browser.page().profile().setRequestInterceptor(RequestInterceptor(self))
+        new_tab_index = self.tab_widget.addTab(new_browser, 'New Tab')
+        self.tab_widget.setCurrentIndex(new_tab_index)
+        self.browser = new_browser
+
+    def navigate_to_url(self):
+        url = self.url_bar.text()
+        if not url.startswith('http://') and not url.startswith('https://'):
+            url = 'https://' + url
+        self.browser.setUrl(QUrl(url))
+        if not self.is_private_browsing:
+            self.history.append(url)
+
+    def go_home(self):
+        self.browser.setUrl(QUrl(self.home_url))
+
+    def close_tab(self, index):
+        self.tab_widget.removeTab(index)
+
+    def add_bookmark(self):
+        url = self.browser.url().toString()
+        if url not in self.bookmarks:
+            self.bookmarks.append(url)
+            QMessageBox.information(self, 'Bookmark Added', f'{url} has been added to your bookmarks.')
+
+    def view_bookmarks(self):
+        bookmarks_str = "\n".join(self.bookmarks) if self.bookmarks else "No bookmarks available."
+        QMessageBox.information(self, 'Bookmarks', bookmarks_str)
+
+    def view_history(self):
+        history_str = "\n".join(self.history) if self.history else "No browsing history."
+        QMessageBox.information(self, 'History', history_str)
+
+    def set_homepage(self):
+        homepage, ok = QInputDialog.getText(self, 'Set Homepage', 'Enter your homepage URL:')
+        if ok and homepage:
+            self.home_url = homepage
+            QMessageBox.information(self, 'Homepage Set', f'Your homepage has been set to {homepage}.')
+
+    def toggle_private_browsing(self):
+        self.is_private_browsing = not self.is_private_browsing
+        if self.is_private_browsing:
+            QMessageBox.information(self, 'Private Browsing', 'Private browsing mode is now ON. History and cookies will not be saved.')
+        else:
+            QMessageBox.information(self, 'Private Browsing', 'Private browsing mode is now OFF.')
+
+    def check_for_updates(self):
+        try:
+            response = requests.get('https://api.github.com/repos/owgydz/val/releases/latest')
+            latest_version = response.json()['tag_name']
+            current_version = 'v13.0.2259.64'
+
+            if latest_version != current_version:
+                QMessageBox.information(self, 'Update Available', f'A new version ({latest_version}) is available.')
+            else:
+                QMessageBox.information(self, 'Up-to-date', 'You are using the latest version.')
+        except requests.exceptions.RequestException:
+            QMessageBox.warning(self, 'Error', 'Unable to check for updates at the moment.')
+
+    def show_version_info(self):
+        QMessageBox.information(self, 'Version Info', 'Val Browser version: v13.0.2259.64\nCopyright (c) 2025 the Val Browser team.') 
+
+    def open_download_manager(self):
+        self.download_manager_dialog = DownloadManager(self.downloads)
+        self.download_manager_dialog.exec_()
+
+    def set_style(self, theme):
+        if theme == 'dark':
+            self.setStyleSheet("""
+                QMainWindow { background-color: #2c2c2c; color: white; }
+                QLineEdit { background-color: #4d4d4d; color: white; border: 1px solid #666; }
+                QPushButton { background-color: #5c5c5c; color: white; border-radius: 5px; }
+                QTabWidget { background-color: #3c3c3c; }
+            """)
+        else:
+            self.setStyleSheet("""
+                QMainWindow { background-color: white; color: black; }
+                QLineEdit { background-color: #f0f0f0; color: black; border: 1px solid #ccc; }
+                QPushButton { background-color: #e0e0e0; color: black; border-radius: 5px; }
+                QTabWidget { background-color: #f7f7f7; }
+            """)
+
+    def change_theme(self):
+        dialog = ThemeDialog(self)
+        dialog.exec_()
+
+class ThemeDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle('Choose your theme')
+        self.setGeometry(400, 200, 300, 150)
+
+        self.light_radio = QRadioButton('Light Theme', self)
+        self.light_radio.setChecked(True)
+        self.dark_radio = QRadioButton('Dark Theme', self)
+
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.light_radio)
+        layout.addWidget(self.dark_radio)
+
+        button = QPushButton('Apply', self)
+        button.clicked.connect(self.apply_theme)
+        layout.addWidget(button)
+
+    def apply_theme(self):
+        if self.light_radio.isChecked():
+            self.parent().set_style('light')
+        else:
+            self.parent().set_style('dark')
+        self.accept()
+
+class RequestInterceptor(QWebEnginePage):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.parent = parent
+
+    def createRequest(self, operation, request, data):
+        # Block pop-ups based on windowName
+        if "popup" in request.url().toString().lower() or request.url().toString().startswith("about:blank"):
+            return None  # Block the pop-up request
+        return super().createRequest(operation, request, data)
+
+class DownloadManager(QDialog):
+    def __init__(self, downloads, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle('Download Manager')
+        self.setGeometry(400, 200, 400, 300)
+        self.layout = QVBoxLayout(self)
+
+        self.downloads = downloads
+        self.progress_bars = {}
+
+        for download in self.downloads:
+            progress_bar = QProgressBar(self)
+            progress_bar.setRange(0, 100)
+            progress_bar.setValue(0)
+            self.layout.addWidget(progress_bar)
+            self.progress_bars[download['url']] = progress_bar
+
+    def update_progress(self, download):
+        progress_bar = self.progress_bars.get(download['url'])
+        if progress_bar:
+            progress_bar.setValue(download['progress'])
+
+    def add_download(self, url):
+        self.downloads.append({'url': url, 'progress': 0})
+        self.update_progress(self.downloads[-1])
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    browser = ValBrowser()
+    browser.show()
+    sys.exit(app.exec_())
