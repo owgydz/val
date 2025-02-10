@@ -176,7 +176,7 @@ class val(QMainWindow):
         try:
             response = requests.get('https://api.github.com/repos/owgydz/val/releases/latest')
             latest_version = response.json()['tag_name']
-            current_version = 'v13.0.2259.76'
+            current_version = 'v13.0.2259.81'
 
             if latest_version != current_version:
                 QMessageBox.information(self, 'Update Available', f'A new version ({latest_version}) is available.')
