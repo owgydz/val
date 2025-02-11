@@ -1,10 +1,12 @@
+import json
 import sys
 import requests
 import os
-from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QPushButton, QLineEdit, QHBoxLayout, QTabWidget, QAction, QMessageBox, QMenuBar, QInputDialog, QRadioButton, QVBoxLayout, QDialog, QProgressBar, QStatusBar, QDockWidget, QListWidget
+from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QPushButton, QLineEdit, QHBoxLayout, QTabWidget, QAction, QMessageBox, QMenuBar, QInputDialog, QRadioButton, QVBoxLayout, QDialog, QListWidget, QListWidgetItem, QColorDialog, QProgressBar, QDockWidget, QAbstractItemView
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineProfile, QWebEnginePage, QWebEngineDownloadItem
 from PyQt5.QtWebEngineCore import QWebEngineUrlRequestInterceptor
 from PyQt5.QtCore import QUrl, Qt, QTimer, QEventLoop, QThread
+from PyQt5.QtGui import QColor
 from datetime import datetime, time
 
 class val(QMainWindow):
@@ -154,6 +156,9 @@ class val(QMainWindow):
         self.sidebar.setWidget(self.sidebar_widget)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.sidebar)
         self.update_sidebar()
+
+        # Session Management
+        self.restore_session()
 
     def add_new_tab(self, url):
         new_browser = QWebEngineView(self)
@@ -306,6 +311,29 @@ class val(QMainWindow):
     def select_channel(self):
         dialog = ChannelDialog(self)
         dialog.exec_()
+
+    def save_session(self):
+        session_data = {
+            'tabs': [self.tab_widget.widget(i).url().toString() for i in range(self.tab_widget.count())],
+            'history': self.history,
+            'bookmarks': self.bookmarks,
+        }
+        with open('session.json', 'w') as session_file:
+            json.dump(session_data, session_file)
+
+    def restore_session(self):
+        if os.path.exists('session.json'):
+            with open('session.json', 'r') as session_file:
+                session_data = json.load(session_file)
+            for url in session_data['tabs']:
+                self.add_new_tab(url)
+            self.history = session_data['history']
+            self.bookmarks = session_data['bookmarks']
+            self.update_sidebar()
+
+    def closeEvent(self, event):
+        self.save_session()
+        event.accept()
 
 class ThemeDialog(QDialog):
     def __init__(self, parent=None):
