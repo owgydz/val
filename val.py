@@ -1,19 +1,21 @@
-import json
 import sys
 import requests
 import os
-from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QPushButton, QLineEdit, QHBoxLayout, QTabWidget, QAction, QMessageBox, QMenuBar, QInputDialog, QRadioButton, QVBoxLayout, QDialog, QListWidget, QListWidgetItem, QColorDialog, QProgressBar, QDockWidget, QAbstractItemView
+from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QPushButton, QLineEdit, QHBoxLayout, QTabWidget, QAction, QMessageBox, QMenuBar, QInputDialog, QRadioButton, QDialog, QProgressBar, QStatusBar, QDockWidget, QListWidget, QLabel
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineProfile, QWebEnginePage, QWebEngineDownloadItem
 from PyQt5.QtWebEngineCore import QWebEngineUrlRequestInterceptor
 from PyQt5.QtCore import QUrl, Qt, QTimer, QEventLoop, QThread
-from PyQt5.QtGui import QColor
+from PyQt5.QtGui import QIcon
 from datetime import datetime, time
 
-class val(QMainWindow):
+class Val(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle('Val')
+        self.setWindowTitle('Val Browser')
         self.setGeometry(100, 100, 1200, 800)
+
+        # Initialize browser early
+        self.browser = QWebEngineView(self)
 
         # Initialize light theme by default
         self.theme = 'light'
@@ -28,7 +30,7 @@ class val(QMainWindow):
         self.setCentralWidget(self.main_widget)
         self.layout = QVBoxLayout(self.main_widget)
 
-        # Set up the navigation bar (URL bar, Back, Forward, Refresh, Home, Search)
+        # Navigation bar
         self.nav_bar = QWidget(self)
         self.nav_layout = QHBoxLayout(self.nav_bar)
         self.url_bar = QLineEdit(self)
@@ -36,27 +38,27 @@ class val(QMainWindow):
         self.url_bar.returnPressed.connect(self.navigate_to_url)
         self.nav_layout.addWidget(self.url_bar)
 
-        # Add buttons for navigation
-        self.back_button = QPushButton("Back")
+        # Define icon paths
+        icon_dir = os.path.join(os.path.dirname(__file__), 'icons')
+        back_icon = QIcon(os.path.join(icon_dir, 'back.png'))
+        forward_icon = QIcon(os.path.join(icon_dir, 'forward.png'))
+        refresh_icon = QIcon(os.path.join(icon_dir, 'refresh.png'))
+        home_icon = QIcon(os.path.join(icon_dir, 'home.png'))
+
+        self.back_button = QPushButton(back_icon, "")
+        self.forward_button = QPushButton(forward_icon, "")
+        self.refresh_button = QPushButton(refresh_icon, "")
+        self.home_button = QPushButton(home_icon, "")
+
+        self.back_button.setToolTip("Go Back")
+        self.forward_button.setToolTip("Go Forward")
+        self.refresh_button.setToolTip("Refresh Page")
+        self.home_button.setToolTip("Go Home")
+
         self.nav_layout.addWidget(self.back_button)
-
-        self.forward_button = QPushButton("Forward")
         self.nav_layout.addWidget(self.forward_button)
-
-        self.refresh_button = QPushButton("Refresh")
         self.nav_layout.addWidget(self.refresh_button)
-
-        self.home_button = QPushButton("Home")
         self.nav_layout.addWidget(self.home_button)
-
-        # Initialize browser
-        self.browser = QWebEngineView(self)
-
-        # Connect button signals
-        self.back_button.clicked.connect(self.browser.back)
-        self.forward_button.clicked.connect(self.browser.forward)
-        self.refresh_button.clicked.connect(self.browser.reload)
-        self.home_button.clicked.connect(self.go_home)
 
         self.layout.addWidget(self.nav_bar)
 
@@ -72,15 +74,18 @@ class val(QMainWindow):
         # Default home URL
         self.home_url = 'https://www.google.com'
 
-        # Bookmarks and history management
+        # Connect button signals AFTER initializing self.browser
+        self.back_button.clicked.connect(lambda: self.browser.back())
+        self.forward_button.clicked.connect(lambda: self.browser.forward())
+        self.refresh_button.clicked.connect(lambda: self.browser.reload())
+        self.home_button.clicked.connect(self.go_home)
+
+        # Bookmarks, history, private browsing
         self.bookmarks = []
         self.history = []
         self.is_private_browsing = False
 
-        # Download manager setup
-        self.downloads = []
-
-        # First tab - New tab
+        # First tab
         self.add_new_tab(self.home_url)
 
         # Set up menu
@@ -157,17 +162,17 @@ class val(QMainWindow):
         self.addDockWidget(Qt.LeftDockWidgetArea, self.sidebar)
         self.update_sidebar()
 
-        # Session Management
-        self.restore_session()
-
     def add_new_tab(self, url):
         new_browser = QWebEngineView(self)
         new_browser.setUrl(QUrl(url))
-        interceptor = RequestInterceptor(self)
+
+        # Set request interceptor properly
+        interceptor = RequestInterceptor()
         new_browser.page().profile().setRequestInterceptor(interceptor)
+
         new_tab_index = self.tab_widget.addTab(new_browser, 'New Tab')
         self.tab_widget.setCurrentIndex(new_tab_index)
-        self.browser = new_browser
+        self.browser = new_browser  # Update active browser
 
     def navigate_to_url(self):
         url = self.url_bar.text()
@@ -236,7 +241,7 @@ class val(QMainWindow):
         try:
             response = requests.get(f'https://api.github.com/repos/owgydz/val/releases/latest?channel={self.channel}')
             latest_version = response.json()['tag_name']
-            current_version = 'v13.0.5289.256'
+            current_version = 'v13.0.5571.262'
 
             if latest_version != current_version:
                 QMessageBox.information(self, 'Update Available', f'A new version ({latest_version}) is available.')
@@ -246,7 +251,7 @@ class val(QMainWindow):
             QMessageBox.warning(self, 'Error', 'Unable to check for updates at the moment.')
 
     def show_version_info(self):
-        QMessageBox.information(self, 'Version', f'Val Browser version: v13.0.5289.256, {self.channel} channel.\nCopyright (c) 2025 the Val Browser team.')
+        QMessageBox.information(self, 'Version', f'Val Browser version: v13.0.5571.262, {self.channel} channel.\nCopyright (c) 2025 the Val Browser authors, under Orange, Inc.')
 
     def open_download_manager(self):
         self.download_manager_dialog = DownloadManager(self.downloads)
@@ -260,31 +265,23 @@ class val(QMainWindow):
                 QPushButton { background-color: #5c5c5c; color: white; border-radius: 5px; }
                 QTabWidget { background-color: #3c3c3c; }
             """)
-            
-            # Inject dark mode CSS for Google
-            self.browser.page().runJavaScript("""
-                (function() {
-                    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                        document.documentElement.style.backgroundColor = '#2c2c2c';
-                        document.documentElement.style.color = 'white';
-                    }
-                })();
-            """)
+            if hasattr(self, 'browser') and self.browser:
+                self.browser.page().runJavaScript("""
+                    document.documentElement.style.backgroundColor = '#2c2c2c';
+                    document.documentElement.style.color = 'white';
+                """)
         else:
             self.setStyleSheet("""
                 QMainWindow { background-color: white; color: black; }
                 QLineEdit { background-color: #f0f0f0; color: black; border: 1px solid #ccc; }
                 QPushButton { background-color: #e0e0e0; color: black; border-radius: 5px; }
-                QTabWidget { background-color: #f7f77; }
+                QTabWidget { background-color: #f7f7f7; }
             """)
-
-            # Reset Google to light mode
-            self.browser.page().runJavaScript("""
-                (function() {
+            if hasattr(self, 'browser') and self.browser:
+                self.browser.page().runJavaScript("""
                     document.documentElement.style.backgroundColor = '';
                     document.documentElement.style.color = '';
-                })();
-            """)
+                """)
 
     def change_theme(self):
         dialog = ThemeDialog(self)
@@ -311,29 +308,6 @@ class val(QMainWindow):
     def select_channel(self):
         dialog = ChannelDialog(self)
         dialog.exec_()
-
-    def save_session(self):
-        session_data = {
-            'tabs': [self.tab_widget.widget(i).url().toString() for i in range(self.tab_widget.count())],
-            'history': self.history,
-            'bookmarks': self.bookmarks,
-        }
-        with open('session.json', 'w') as session_file:
-            json.dump(session_data, session_file)
-
-    def restore_session(self):
-        if os.path.exists('session.json'):
-            with open('session.json', 'r') as session_file:
-                session_data = json.load(session_file)
-            for url in session_data['tabs']:
-                self.add_new_tab(url)
-            self.history = session_data['history']
-            self.bookmarks = session_data['bookmarks']
-            self.update_sidebar()
-
-    def closeEvent(self, event):
-        self.save_session()
-        event.accept()
 
 class ThemeDialog(QDialog):
     def __init__(self, parent=None):
@@ -425,6 +399,6 @@ class DownloadManager(QDialog):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    browser = val()
+    browser = Val()
     browser.show()
     sys.exit(app.exec_())
