@@ -1,3 +1,7 @@
+# Copyright 2025 the Val authors
+# This project is governed under the GNU General Public License, v2.0. See in the LICENSE file.
+
+#imports
 import sys
 import requests
 import os
@@ -13,24 +17,14 @@ class Val(QMainWindow):
         super().__init__()
         self.setWindowTitle('Val Browser')
         self.setGeometry(100, 100, 1200, 800)
-
-        # Initialize browser early
         self.browser = QWebEngineView(self)
-
-        # Initialize light theme by default
         self.theme = 'light'
         self.set_style(self.theme)
-
-        # Initialize channel to Stable by default
         self.channel = 'stable'
         self.set_channel(self.channel)
-
-        # Set up the main widget and layout
         self.main_widget = QWidget()
         self.setCentralWidget(self.main_widget)
         self.layout = QVBoxLayout(self.main_widget)
-
-        # Navigation bar
         self.nav_bar = QWidget(self)
         self.nav_layout = QHBoxLayout(self.nav_bar)
         self.url_bar = QLineEdit(self)
@@ -38,7 +32,6 @@ class Val(QMainWindow):
         self.url_bar.returnPressed.connect(self.navigate_to_url)
         self.nav_layout.addWidget(self.url_bar)
 
-        # Define icon paths
         icon_dir = os.path.join(os.path.dirname(__file__), 'icons')
         back_icon = QIcon(os.path.join(icon_dir, 'back.png'))
         forward_icon = QIcon(os.path.join(icon_dir, 'forward.png'))
@@ -49,20 +42,15 @@ class Val(QMainWindow):
         self.forward_button = QPushButton(forward_icon, "")
         self.refresh_button = QPushButton(refresh_icon, "")
         self.home_button = QPushButton(home_icon, "")
-
         self.back_button.setToolTip("Go Back")
         self.forward_button.setToolTip("Go Forward")
         self.refresh_button.setToolTip("Refresh Page")
         self.home_button.setToolTip("Go Home")
-
         self.nav_layout.addWidget(self.back_button)
         self.nav_layout.addWidget(self.forward_button)
         self.nav_layout.addWidget(self.refresh_button)
         self.nav_layout.addWidget(self.home_button)
-
         self.layout.addWidget(self.nav_bar)
-
-        # Create a tab widget for multiple tabs
         self.tab_widget = QTabWidget(self)
         self.tab_widget.setTabsClosable(True)
         self.tab_widget.setMovable(True)
@@ -71,24 +59,19 @@ class Val(QMainWindow):
         self.tab_widget.currentChanged.connect(self.update_url_bar)
         self.layout.addWidget(self.tab_widget)
 
-        # Default home URL
         self.home_url = 'https://www.google.com'
 
-        # Connect button signals AFTER initializing self.browser
         self.back_button.clicked.connect(lambda: self.browser.back())
         self.forward_button.clicked.connect(lambda: self.browser.forward())
         self.refresh_button.clicked.connect(lambda: self.browser.reload())
         self.home_button.clicked.connect(self.go_home)
 
-        # Bookmarks, history, private browsing
         self.bookmarks = []
         self.history = []
         self.is_private_browsing = False
 
-        # First tab
         self.add_new_tab(self.home_url)
 
-        # Set up menu
         self.menu_bar = self.menuBar()
         self.file_menu = self.menu_bar.addMenu('File')
         self.bookmarks_menu = self.menu_bar.addMenu('Bookmarks')
