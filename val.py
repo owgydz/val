@@ -5,7 +5,8 @@
 import sys
 import requests
 import os
-from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QPushButton, QLineEdit, QHBoxLayout, QTabWidget, QAction, QMessageBox, QMenuBar, QInputDialog, QRadioButton, QDialog, QProgressBar, QStatusBar, QDockWidget, QListWidget, QLabel
+import json
+from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QPushButton, QLineEdit, QHBoxLayout, QTabWidget, QAction, QMessageBox, QMenuBar, QInputDialog, QRadioButton, QDialog, QProgressBar, QStatusBar, QDockWidget, QListWidget, QLabel, QTextEdit
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineProfile, QWebEnginePage, QWebEngineDownloadItem
 from PyQt5.QtWebEngineCore import QWebEngineUrlRequestInterceptor
 from PyQt5.QtCore import QUrl, Qt, QTimer, QEventLoop, QThread
@@ -15,7 +16,7 @@ from datetime import datetime, time
 class Val(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle('Val Browser')
+        self.setWindowTitle('Orange Valium')
         self.setGeometry(100, 100, 1200, 800)
         self.browser = QWebEngineView(self)
         self.theme = 'light'
@@ -25,13 +26,17 @@ class Val(QMainWindow):
         self.main_widget = QWidget()
         self.setCentralWidget(self.main_widget)
         self.layout = QVBoxLayout(self.main_widget)
+
+        # Nav 
         self.nav_bar = QWidget(self)
         self.nav_layout = QHBoxLayout(self.nav_bar)
         self.url_bar = QLineEdit(self)
-        self.url_bar.setPlaceholderText("Enter URL and hit Enter...")
+        self.url_bar.setPlaceholderText("Enter a URL and hit Enter...")
+        self.url_bar.setFixedHeight(35) # See here: https://github.com/owgydz/valium/issues/3
         self.url_bar.returnPressed.connect(self.navigate_to_url)
         self.nav_layout.addWidget(self.url_bar)
 
+        # Icons
         icon_dir = os.path.join(os.path.dirname(__file__), 'icons')
         back_icon = QIcon(os.path.join(icon_dir, 'back.png'))
         forward_icon = QIcon(os.path.join(icon_dir, 'forward.png'))
@@ -42,15 +47,20 @@ class Val(QMainWindow):
         self.forward_button = QPushButton(forward_icon, "")
         self.refresh_button = QPushButton(refresh_icon, "")
         self.home_button = QPushButton(home_icon, "")
+
         self.back_button.setToolTip("Go Back")
         self.forward_button.setToolTip("Go Forward")
         self.refresh_button.setToolTip("Refresh Page")
         self.home_button.setToolTip("Go Home")
+
         self.nav_layout.addWidget(self.back_button)
         self.nav_layout.addWidget(self.forward_button)
         self.nav_layout.addWidget(self.refresh_button)
         self.nav_layout.addWidget(self.home_button)
+
         self.layout.addWidget(self.nav_bar)
+
+        # Create a tab widget for multiple tabs
         self.tab_widget = QTabWidget(self)
         self.tab_widget.setTabsClosable(True)
         self.tab_widget.setMovable(True)
@@ -59,19 +69,24 @@ class Val(QMainWindow):
         self.tab_widget.currentChanged.connect(self.update_url_bar)
         self.layout.addWidget(self.tab_widget)
 
+        # Default home URL
         self.home_url = 'https://www.google.com'
 
+        # Connect button signals AFTER initializing self.browser
         self.back_button.clicked.connect(lambda: self.browser.back())
         self.forward_button.clicked.connect(lambda: self.browser.forward())
         self.refresh_button.clicked.connect(lambda: self.browser.reload())
         self.home_button.clicked.connect(self.go_home)
 
+        # Bookmarks, history, private browsing
         self.bookmarks = []
         self.history = []
         self.is_private_browsing = False
 
+        # First tab
         self.add_new_tab(self.home_url)
 
+        # Set up menu
         self.menu_bar = self.menuBar()
         self.file_menu = self.menu_bar.addMenu('File')
         self.bookmarks_menu = self.menu_bar.addMenu('Bookmarks')
@@ -144,6 +159,9 @@ class Val(QMainWindow):
         self.sidebar.setWidget(self.sidebar_widget)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.sidebar)
         self.update_sidebar()
+
+        # Load session if available
+        self.load_session()
 
     def add_new_tab(self, url):
         new_browser = QWebEngineView(self)
@@ -224,7 +242,7 @@ class Val(QMainWindow):
         try:
             response = requests.get(f'https://api.github.com/repos/owgydz/val/releases/latest?channel={self.channel}')
             latest_version = response.json()['tag_name']
-            current_version = 'v13.0.5571.263'
+            current_version = '14.0.1528.11'
 
             if latest_version != current_version:
                 QMessageBox.information(self, 'Update Available', f'A new version ({latest_version}) is available.')
@@ -234,12 +252,12 @@ class Val(QMainWindow):
             QMessageBox.warning(self, 'Error', 'Unable to check for updates at the moment.')
 
     def show_version_info(self):
-        QMessageBox.information(self, 'Version', f'Val Browser version: v13.0.5571.263, {self.channel} channel.\nCopyright (c) 2025 the Val Browser authors, under Orange, Inc.')
+        QMessageBox.information(self, 'Version', f'Val Browser version: v14.0.1528.11, {self.channel} channel.\nCopyright (c) 2025 the Val Browser authors, under Orange, Inc.')
 
     def open_download_manager(self):
         self.download_manager_dialog = DownloadManager(self.downloads)
         self.download_manager_dialog.exec_()
-
+  
     def set_style(self, theme):
         if theme == 'dark':
             self.setStyleSheet("""
@@ -252,6 +270,10 @@ class Val(QMainWindow):
                 self.browser.page().runJavaScript("""
                     document.documentElement.style.backgroundColor = '#2c2c2c';
                     document.documentElement.style.color = 'white';
+                    if (document.querySelector('body.ntp')) {
+                        document.querySelector('body.ntp').style.backgroundColor = '#2c2c2c';
+                        document.querySelector('body.ntp').style.color = 'white';
+                    }
                 """)
         else:
             self.setStyleSheet("""
@@ -264,6 +286,10 @@ class Val(QMainWindow):
                 self.browser.page().runJavaScript("""
                     document.documentElement.style.backgroundColor = '';
                     document.documentElement.style.color = '';
+                    if (document.querySelector('body.ntp')) {
+                        document.querySelector('body.ntp').style.backgroundColor = '';
+                        document.querySelector('body.ntp').style.color = '';
+                    }
                 """)
 
     def change_theme(self):
@@ -272,7 +298,7 @@ class Val(QMainWindow):
 
     def check_dark_mode_schedule(self):
         current_time = datetime.now().time()
-        if current_time >= time(18, 0) or current_time < time(6, 0):  # Example: Dark mode from 6 PM to 6 AM
+        if current_time >= time(18, 0) or current_time < time(6, 0):  # Between 6 PM and 6 AM
             self.set_style('dark')
         else:
             self.set_style('light')
@@ -291,6 +317,28 @@ class Val(QMainWindow):
     def select_channel(self):
         dialog = ChannelDialog(self)
         dialog.exec_()
+
+    def save_session(self):
+        session = {
+            'tabs': [self.tab_widget.widget(i).url().toString() for i in range(self.tab_widget.count())],
+            'current_tab': self.tab_widget.currentIndex()
+        }
+        with open('session.json', 'w') as f:
+            json.dump(session, f)
+
+    def load_session(self):
+        if os.path.exists('session.json'):
+            with open('session.json', 'r') as f:
+                session = json.load(f)
+                for url in session['tabs']:
+                    self.add_new_tab(url)
+                self.tab_widget.setCurrentIndex(session['current_tab'])
+
+    def closeEvent(self, event):
+        reply = QMessageBox.question(self, 'Save Session', 'Do you want to save your session?', QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            self.save_session()
+        event.accept()
 
 class ThemeDialog(QDialog):
     def __init__(self, parent=None):
@@ -353,7 +401,6 @@ class RequestInterceptor(QWebEngineUrlRequestInterceptor):
             info.block(True)  # Block the request
         else:
             info.block(False)  # Allow the request
-
 class DownloadManager(QDialog):
     def __init__(self, downloads, parent=None):
         super().__init__(parent)
