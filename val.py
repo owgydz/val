@@ -242,7 +242,7 @@ class Val(QMainWindow):
         try:
             response = requests.get(f'https://api.github.com/repos/owgydz/val/releases/latest?channel={self.channel}')
             latest_version = response.json()['tag_name']
-            current_version = '14.0.1528.11'
+            current_version = '14.0.1528.15'
 
             if latest_version != current_version:
                 QMessageBox.information(self, 'Update Available', f'A new version ({latest_version}) is available.')
@@ -252,7 +252,7 @@ class Val(QMainWindow):
             QMessageBox.warning(self, 'Error', 'Unable to check for updates at the moment.')
 
     def show_version_info(self):
-        QMessageBox.information(self, 'Version', f'Val Browser version: v14.0.1528.11, {self.channel} channel.\nCopyright (c) 2025 the Val Browser authors, under Orange, Inc.')
+        QMessageBox.information(self, 'Version', f'Val Browser version: v14.0.1528.15, {self.channel} channel.\nCopyright (c) 2025 the Val Browser authors, under Orange, Inc.')
 
     def open_download_manager(self):
         self.download_manager_dialog = DownloadManager(self.downloads)
