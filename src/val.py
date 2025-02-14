@@ -32,8 +32,8 @@ class Val(QMainWindow):
         self.nav_bar = QWidget(self)
         self.nav_layout = QHBoxLayout(self.nav_bar)
         self.url_bar = QLineEdit(self)
-        self.url_bar.setPlaceholderText("Enter a URL and hit Enter...")
-        self.url_bar.setFixedHeight(35) # See here: https://github.com/owgydz/valium/issues/3
+        self.url_bar.setPlaceholderText("Search Google or type a URL")
+        self.url_bar.setFixedHeight(35)
         self.url_bar.returnPressed.connect(self.navigate_to_url)
         self.nav_layout.addWidget(self.url_bar)
 
@@ -54,11 +54,10 @@ class Val(QMainWindow):
         self.refresh_button.setToolTip("Refresh Page")
         self.home_button.setToolTip("Go Home")
 
-        self.nav_layout.addWidget(self.back_button)
-        self.nav_layout.addWidget(self.forward_button)
-        self.nav_layout.addWidget(self.refresh_button)
-        self.nav_layout.addWidget(self.home_button)
-
+        self.nav_layout.insertWidget(0, self.back_button)
+        self.nav_layout.insertWidget(1, self.forward_button)
+        self.nav_layout.insertWidget(2, self.refresh_button)
+        self.nav_layout.insertWidget(3, self.home_button)
         self.layout.addWidget(self.nav_bar)
 
         # Create a tab widget for multiple tabs
@@ -365,6 +364,19 @@ class Val(QMainWindow):
         self.cpu_label.setText(f"CPU Usage: {cpu_usage}%")
         self.mem_label.setText(f"Memory Usage: {mem_usage}%")
 
+    def show_usage(self):
+        usage_dialog = QDialog(self)
+        usage_dialog.setWindowTitle('Performance Usage')
+        usage_dialog.setGeometry(400, 200, 300, 150)
+
+        layout = QVBoxLayout(usage_dialog)
+        cpu_label = QLabel(f"CPU Usage: {psutil.cpu_percent()}%", usage_dialog)
+        mem_label = QLabel(f"Memory Usage: {psutil.virtual_memory().percent}%", usage_dialog)
+        layout.addWidget(cpu_label)
+        layout.addWidget(mem_label)
+
+        usage_dialog.exec_()
+
 class ThemeDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -423,9 +435,10 @@ class RequestInterceptor(QWebEngineUrlRequestInterceptor):
     def interceptRequest(self, info):
         url = info.requestUrl().toString().lower()
         if "popup" in url or url.startswith("about:blank"):
-            info.block(True)  # Block the request
+            info.block(True)  # Block 
         else:
-            info.block(False)  # Allow the request
+            info.block(False)  # Allow 
+
 class DownloadManager(QDialog):
     def __init__(self, downloads, parent=None):
         super().__init__(parent)
