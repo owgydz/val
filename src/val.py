@@ -32,7 +32,7 @@ class Val(QMainWindow):
         self.nav_bar = QWidget(self)
         self.nav_layout = QHBoxLayout(self.nav_bar)
         self.url_bar = QLineEdit(self)
-        self.url_bar.setPlaceholderText("Search Google or type a URL")
+        self.url_bar.setPlaceholderText("Search Valium or type a URL")
         self.url_bar.setFixedHeight(35)
         self.url_bar.returnPressed.connect(self.navigate_to_url)
         self.nav_layout.addWidget(self.url_bar)
