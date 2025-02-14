@@ -1,6 +1,6 @@
 import unittest
 from PyQt5.QtWidgets import QApplication
-from valium.src.val import Val
+from val import Val
 
 class TestVal(unittest.TestCase):
     @classmethod
