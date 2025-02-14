@@ -6,6 +6,7 @@ import sys
 import requests
 import os
 import json
+import psutil
 from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QPushButton, QLineEdit, QHBoxLayout, QTabWidget, QAction, QMessageBox, QMenuBar, QInputDialog, QRadioButton, QDialog, QProgressBar, QStatusBar, QDockWidget, QListWidget, QLabel, QTextEdit
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineProfile, QWebEnginePage, QWebEngineDownloadItem
 from PyQt5.QtWebEngineCore import QWebEngineUrlRequestInterceptor
@@ -152,6 +153,14 @@ class Val(QMainWindow):
         self.browser.loadStarted.connect(self.show_loading_status)
         self.browser.loadFinished.connect(self.show_ready_status)
 
+        # Tools submenu
+        self.tools_menu = self.settings_menu.addMenu('Tools')
+
+        # Usage action that should go under `Tools`
+        self.usage_action = QAction('Usage', self)
+        self.usage_action.triggered.connect(self.show_usage)
+        self.tools_menu.addAction(self.usage_action)
+
         # Sidebar for Bookmarks and History
         self.sidebar = QDockWidget("Bookmarks & History", self)
         self.sidebar.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
@@ -159,6 +168,16 @@ class Val(QMainWindow):
         self.sidebar.setWidget(self.sidebar_widget)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.sidebar)
         self.update_sidebar()
+        
+        # Performance monitoring for workloads.
+        self.performance_timer = QTimer(self)
+        self.performance_timer.timeout.connect(self.check_performance)
+        self.performance_timer.start(5000) # Forces to 5 seconds.   
+
+        self.cpu_label = QLabel("CPU Usage: 0%", self)
+        self.mem_label = QLabel("Memory Usage: 0%", self)
+        self.status_bar.addPermanentWidget(self.cpu_label)
+        self.status_bar.addPermanentWidget(self.mem_label)
 
         # Load session if available
         self.load_session()
@@ -166,8 +185,6 @@ class Val(QMainWindow):
     def add_new_tab(self, url):
         new_browser = QWebEngineView(self)
         new_browser.setUrl(QUrl(url))
-
-        # Set request interceptor properly
         interceptor = RequestInterceptor()
         new_browser.page().profile().setRequestInterceptor(interceptor)
 
@@ -339,6 +356,14 @@ class Val(QMainWindow):
         if reply == QMessageBox.Yes:
             self.save_session()
         event.accept()
+    
+    def update_performance():
+        cpu_usage = psutil.cpu_percent()
+        mem_info = psutil.virtual_memory()
+        mem_usage = mem_usage.percent
+        
+        self.cpu_label.setText(f"CPU Usage: {cpu_usage}%")
+        self.mem_label.setText(f"Memory Usage: {mem_usage}%")
 
 class ThemeDialog(QDialog):
     def __init__(self, parent=None):
